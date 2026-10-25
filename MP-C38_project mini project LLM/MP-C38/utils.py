@@ -76,7 +76,7 @@ def extract_text(path):
 
 # a new clause usually starts with: 1. / 1.1 / (a) / Section 3 / ARTICLE II
 _CLAUSE_START = re.compile(
-    r"^\s*(?:\d+(?:\.\d+)*[.)]?\s+\S|\(\w{1,4}\)\s+\S|(?:section|article|clause)\s+\w+|[A-Z][A-Z \-]{3,40}\.?\s*$)",
+    r"^\s*(?:\d+(?:\.\d+)*[.)]?\s+\S|\(\w{1,4}\)\s+\S|(?:section|article|clause)\s+\w+|(?-i:[A-Z][A-Z \-]{3,40})\.?\s*$)",
     re.IGNORECASE)
 
 
@@ -85,6 +85,10 @@ def split_into_clauses(text, min_chars=40, max_chars=1500):
     Rules: numbered/lettered headings start a clause; otherwise blank lines separate paragraphs;
     very short pieces are merged with the next piece; very long pieces are cut at sentence ends."""
     text = text.replace("\r", "")
+    # PDF extraction can break a line (even a blank line) in the middle of a sentence: join those pieces
+    text = re.sub(r"(?<![.;:!?)\"\u201d])\n\s*\n(?=\S)", " ", text)
+    # numbered clauses that ended up inside one line ("... effect. 5. Entire Agreement ...") start a new line
+    text = re.sub(r"(?<=[.;:])[ \t]+(?=\d{1,2}(?:\.\d+)*\.\s+[A-Z])", "\n", text)
     lines = text.split("\n")
     blocks, cur = [], []
     for line in lines:
